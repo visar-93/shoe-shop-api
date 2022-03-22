@@ -1,16 +1,44 @@
 const path = require('path');
 
 const express = require('express');
+const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const multer = require('multer');
+dotenv.config();
 
 const feedRoutes = require('./routes/feed');
 
 const main = async () => {
     const app = express();
 
+    const fileStorage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, 'images');
+        },
+        // filename: (req, file, cb) => {
+        //     cb(null, new Date().toISOString() + '-' +file.originalname);
+        // }
+        filename: (req, file, cb) => {
+            cb(null, new Date().getTime() + file.originalname);
+          }
+    });
+
+    const fileFilter = (req, file, cb) => {
+        if(
+            file.mimetype === 'image/png' ||
+            file.mimetype === 'image/jpg' ||
+            file.mimetype === 'image/jpeg'
+        ) {
+            cb(null, true);
+        } else {
+            cb(null, false);
+        }
+    };
+
     // app.use(bodyParser.urlencoded()); // x-wwww-form-urlencoded <form>
     app.use(bodyParser.json()); // application-json
+    app.use(multer({storage: fileStorage, fileFilter: fileFilter}).single('image'));
     app.use('/images', express.static(path.join(__dirname, 'images')));
     
     app.use((req, res, next) => {
@@ -29,8 +57,8 @@ const main = async () => {
         res.status(status).json({message: message});
     });
 
-    await mongoose.connect('mongodb+srv://visardb:E7Pzdq6rz8cMCgU8@cluster1.epldc.mongodb.net/project1?retryWrites=true&w=majority')
-    app.listen(8080);
+    await mongoose.connect(process.env.MONGO_URL);
+    app.listen(process.env.PORT || 8080);
 }
 
 main().catch((err) => console.error(err))

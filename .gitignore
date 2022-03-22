@@ -107,4 +107,6 @@ dist
 
 .vscode
 
+.env
+
 package-lock.json
