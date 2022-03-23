@@ -19,4 +19,11 @@ router.post('/post',
 
  router.get("/post/:productId", feedController.getPost);
 
+ 
+router.put('/post/:productId',
+[body("title").trim().isLength({ min: 5 })],
+feedController.updatePost);
+
+router.delete('/post/:productId', feedController.deletePost);
+
 module.exports = router;
