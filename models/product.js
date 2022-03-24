@@ -30,7 +30,12 @@ const productSchema = new Schema(
     },
     colors: [
       colorSchema
-    ],    
+    ],
+    creator: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    }    
   },
   {
     timestamps: true

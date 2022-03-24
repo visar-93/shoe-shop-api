@@ -1,5 +1,4 @@
 const path = require('path');
-
 const express = require('express');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
@@ -8,6 +7,7 @@ const multer = require('multer');
 dotenv.config();
 
 const feedRoutes = require('./routes/feed');
+const authRoutes = require('./routes/auth');
 
 const main = async () => {
     const app = express();
@@ -48,13 +48,15 @@ const main = async () => {
         next();
     });
     
+    app.use('/api/auth', authRoutes);
     app.use('/api/feed', feedRoutes);
     
     app.use((error, req, res, next) => {
         console.log(error);
         const status = error.statusCode || 500;
         const message = error.message;
-        res.status(status).json({message: message});
+        const data = error.data;
+        res.status(status).json({message: message, data: data});
     });
 
     await mongoose.connect(process.env.MONGO_URL);
