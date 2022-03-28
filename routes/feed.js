@@ -17,16 +17,18 @@ router.post(
     feedController.createPost
   );
 
-  // GET /feed/post/id
-  router.get("/post/:productId", isAuth, feedController.getPost);
+// GET /feed/post/id
+router.get("/post/:productId", isAuth, feedController.getPost);
  
-  // PUT / feed/post/id
-  router.put('/post/:productId',
+// PUT / feed/post/id
+router.put('/post/:productId',
   isAuth,
   [body("title").trim().isLength({ min: 5 })],
   feedController.updatePost);
 
-  // DELETE /feed/post/id
-  router.delete('/post/:productId', isAuth, feedController.deletePost);
+// DELETE /feed/post/id
+router.delete('/post/:productId', isAuth, feedController.deletePost);
+
+router.post('/checkout/:productId', feedController.getCharge);
 
 module.exports = router;

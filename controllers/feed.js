@@ -1,8 +1,16 @@
 const { validationResult } = require("express-validator/check");
 const Product = require("../models/product");
 const User = require("../models/user");
+const Order = require('../models/order');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const Stripe = require("stripe");
+const stripe = Stripe(
+  [process.env.STRIPE_KEY]
+);
 
 exports.getPosts = (req, res, next) => {
   Product
@@ -25,17 +33,18 @@ exports.createPost = (req, res, next) => {
     error.statusCode = 422;
     throw error;
   }
-  if(!req.file) {
-    const error = new Error('No image provided.');
-    error.statusCode = 422;
-    throw error;
-  }
+  // Parts below are made as comment for testing in Postman
+  // if(!req.file) {
+  //   const error = new Error('No image provided.');
+  //   error.statusCode = 422;
+  //   throw error;
+  // }
   
-  const imageUrl = req.file.path;
+  // const imageUrl = req.file.path;
   const title = req.body.title;
   const price = req.body.price;
   const code = req.body.code;
-  // const imageUrl = req.body.imageUrl;
+  const imageUrl = req.body.imageUrl; // For testing issues we use this part
   const sizes = req.body.sizes;
   let creator;
 
@@ -110,14 +119,15 @@ exports.updatePost = (req, res, next) => {
   const imageUrl = req.body.imageUrl; // imageUrl should be as in frontend
   const sizes = req.body.sizes;
 
-  if(req.file) {
-    imageUrl = req.file.path;
-  }
-  if(!imageUrl) {
-    const error = new Error('No file picked.');
-    error.statusCode = 422;
-    throw error;
-  }
+  // Parts below are made as comment for testing in Postman
+  // if(req.file) {
+  //   imageUrl = req.file.path;
+  // }
+  // if(!imageUrl) {
+  //   const error = new Error('No file picked.');
+  //   error.statusCode = 422;
+  //   throw error;
+  // }
   Product.findById(productId)
   .then(product => {
     if(!product) {
@@ -131,9 +141,10 @@ exports.updatePost = (req, res, next) => {
       error.statusCode = 403;
       throw error;
     }
-    if(imageUrl !== product.imageUrl) {
-        clearImage(product.imageUrl);
-    }
+  // Parts below are made as comment for testing in Postman
+    // if(imageUrl !== product.imageUrl) {
+    //     clearImage(product.imageUrl);
+    // }
 
     product.title = title;
       product.price = price;
@@ -168,7 +179,7 @@ exports.deletePost = (req, res, next) => {
         error.statusCode = 403;
         throw error;
       }
-      clearImage(product.imageUrl);
+      // clearImage(product.imageUrl);
       return Product.findByIdAndRemove(productId);
     })
     .then((result) => {
@@ -187,6 +198,64 @@ exports.deletePost = (req, res, next) => {
       }
       next(err);
     });
+};
+
+exports.getCharge = async (req, res, next) => {
+  const productId = req.params.productId;
+  const name = req.body.name;
+  const phoneNumber = req.body.phoneNumber;
+  const address = req.body.address;
+  const cardNumber = req.body.cardNumber;
+  const expMon = req.body.expMon;
+  const expYe = req.body.expYe;
+  const cvv = req.body.cvv;
+  let price = 0;
+  let productName = '';
+
+  try {
+    const product = await Product.findById(productId);
+    if (!product) {
+      const error = new Error("Could not find product.");
+      error.statusCode = 404;
+      throw error;
+    }
+    price = product.price;
+    productName = product.title;
+
+    const cardToken = await stripe.tokens.create({
+      card: {
+        number: cardNumber,
+        exp_month: expMon,
+        exp_year: expYe,
+        cvc: cvv,
+        currency: 'usd'
+      },
+    });
+
+    const chargeResult = await stripe.charges.create({
+      amount: price * 100,
+      currency: 'usd',
+      source: cardToken.id,
+    });
+   
+    const chargedOrder = new Order({
+      name: name,
+      phoneNumber: phoneNumber,
+      address: address,
+      chargeId: chargeResult.id,
+      productId: productId,
+      productName: productName
+    });
+
+    await chargedOrder.save();
+
+    res.json(chargedOrder);
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
 
 const clearImage = filePath => {

@@ -1,8 +1,10 @@
 const { validationResult } = require("express-validator/check");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
+const dotenv = require('dotenv');
 const User = require("../models/user");
+
+dotenv.config();
 
 exports.signUp = (req, res, next) => {
   const errors = validationResult(req);
@@ -62,7 +64,7 @@ exports.login = (req, res, next) => {
           email: loadedUser.email,
           userId: loadedUser._id.toString(), // don't store the raw password because it will be returned to the frontend
         },
-        "somesupersecretsecret",
+        process.env.AUTH_SECRET_KEY,
         {
             expiresIn: '1h'
         }
